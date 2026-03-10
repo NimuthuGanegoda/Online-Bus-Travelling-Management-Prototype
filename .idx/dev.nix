@@ -11,6 +11,8 @@
     pkgs.clang
     pkgs.pkg-config
     pkgs.gtk3
+    pkgs.xorg.libX11
+    pkgs.xorg.libXrandr
   ];
   idx = {
     previews.enable = true;

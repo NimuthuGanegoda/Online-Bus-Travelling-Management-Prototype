@@ -5,7 +5,13 @@ const driverRoutes = require('./routes/driver');
 const app = express();
 const port = 3000;
 
-app.use(express.json()); // To parse JSON bodies
+// To parse JSON bodies
+app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.send('Welcome to the driver app backend!');
+});
+
 app.use('/driver', driverRoutes);
 
 app.listen(port, () => {
