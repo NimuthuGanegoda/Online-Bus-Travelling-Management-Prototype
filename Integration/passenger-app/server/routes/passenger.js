@@ -1,6 +1,7 @@
 
 const express = require('express');
 const router = express.Router();
+const axios = require('axios');
 
 // Passenger login
 router.post('/login', (req, res) => {
@@ -27,9 +28,13 @@ router.get('/bus-arrival', (req, res) => {
 });
 
 // Get bus route
-router.get('/bus-route', (req, res) => {
-  // Handle fetching bus route
-  res.send('Get bus route endpoint');
+router.get('/bus-route', async (req, res) => {
+  try {
+    const response = await axios.get('http://localhost:3000/driver/trip');
+    res.send(response.data);
+  } catch (error) {
+    res.status(500).send('Error fetching bus route');
+  }
 });
 
 // Get trip history
