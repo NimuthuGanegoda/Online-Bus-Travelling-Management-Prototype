@@ -36,6 +36,10 @@ The backend and ML models are developed using Python and Node.js.
 *   **Backend & ML:** `Python`, `Node.js`, `Scikit-learn`, `Pandas`
 *   **Database:** `SQLite`
 
+## System Architecture
+
+For a detailed overview of the system's components and how they interact, please see the [System Architecture Diagram](SYSTEM_ARCHITECTURE.md).
+
 ## Project Structure
 
 ```
