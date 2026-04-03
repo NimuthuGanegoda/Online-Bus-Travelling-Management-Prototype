@@ -18,8 +18,10 @@ jobs:
           generate_release_notes: true
           files: |
             docs/diagrams/prototype-system-architecture-diagram.png
+            docs/diagrams/prototype-system-architecture-diagram.jpg
             docs/diagrams/prototype-system-architecture-diagram.pdf
             docs/diagrams/prototype-use-case-diagram.png
+            docs/diagrams/prototype-use-case-diagram.jpg
             docs/diagrams/prototype-use-case-diagram.pdf
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

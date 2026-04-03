@@ -237,45 +237,44 @@ def render_system_architecture() -> Image.Image:
     draw = ImageDraw.Draw(image)
 
     draw.text((60, 42), "Prototype System Architecture Diagram", font=TITLE_FONT, fill=TEXT)
-    subtitle = "Online Bus Travelling Management Prototype: integrated client, backend, data, and ML layers"
+    subtitle = "Online Bus Travelling Management Prototype: architecture derived from the Integration, Sarasi, Amiliya, and Neo prototype packages"
     draw.text((62, 92), subtitle, font=SECTION_FONT, fill=SUBTEXT)
 
     boxes = [
         Box(70, 220, 360, 250, "Passenger Interfaces", [
-            "Integration passenger Flutter app",
-            "Legacy web prototype for login and trip views",
-            "Bus tracking, route lookup, ETA, alerts, trip history, ratings",
+            "Flutter passenger client with login and home flow",
+            "Sarasi passenger prototype screens for tracking, ETA, alerts, ratings, and history",
+            "Passenger journeys request bus location, route, ETA, and complaint data",
         ], ACCENT_BLUE),
         Box(70, 510, 360, 220, "Driver Interfaces", [
-            "Integration driver Flutter app",
-            "Legacy Sarasi driver prototype",
-            "Trip start/end, crowd level, NFC-oriented workflows, emergency reporting",
+            "Flutter driver client with login and registration flow",
+            "Sarasi driver prototype screens for trip control, crowd level, NFC, ratings, and SOS",
+            "Driver journeys manage active trips and emergency reporting",
         ], ACCENT_GREEN),
         Box(70, 770, 360, 230, "Admin Interface", [
-            "React admin dashboard",
-            "Live fleet, route, driver, bus, and emergency handling modules",
-            "Operational oversight and complaint review",
+            "React admin dashboard with nested routes and secure login",
+            "Live fleet, route management, driver management, bus management, emergencies, and complaints",
+            "Operational oversight is wired to Supabase-backed tables and Express APIs",
         ], ACCENT_GOLD),
         Box(530, 190, 360, 280, "Application Backends", [
-            "Passenger backend on port 3001",
-            "Driver backend on port 3000",
-            "Admin backend on port 3002",
-            "Express routes expose login, trip, route, bus, driver, and emergency APIs",
+            "Passenger Express API on port 3001 exposes login, registration, bus-location, bus-route, and ETA placeholders",
+            "Driver Express API on port 3000 exposes login plus trip start, trip end, and active trip retrieval",
+            "Admin Express API on port 3002 exposes login and CRUD endpoints for buses, drivers, routes, and emergencies",
         ], ACCENT_PURPLE),
         Box(530, 550, 360, 230, "Operational Data Layer", [
-            "Supabase-backed tables for trips and bus locations in integrated services",
-            "SQLite modules present in prototype backends",
-            "Stores operational state, profiles, journeys, and emergency records",
+            "Supabase is the shared operational store for trips, bus_locations, routes, drivers, buses, reviews, alerts, and SOS requests",
+            "Integrated frontends query Supabase directly for live fleet, route maps, complaints, and dashboard tables",
+            "Prototype services still preserve lightweight local database scaffolding for earlier phases",
         ], ACCENT_RED),
         Box(1020, 180, 700, 280, "ML Intelligence Layer (Neo)", [
-            "ETA service: Node.js orchestration + Python XGBoost inference + joblib model artifacts",
-            "Bus rating service: Supabase comments + Python classifier + per-driver score aggregation",
-            "Emergency triage service: Node.js pipeline + Python ranking model + severity features",
+            "ETA engine uses Node.js orchestration, Python inference, and joblib model artifacts trained on trip features",
+            "Driver rating engine pulls Supabase comments and classifies sentiment per driver through a Python model",
+            "Emergency triage engine ranks emergency incidents through a Node.js to Python scoring pipeline",
         ], "#d7eadf"),
         Box(1020, 560, 700, 230, "Prototype Assets and Training Data", [
-            "CSV datasets, trained model binaries, feature encoders, generated prediction outputs",
-            "Frontend image references and legacy prototype materials",
-            "Release artifacts can include exported diagrams for documentation delivery",
+            "CSV datasets, trained model binaries, feature encoders, and generated prediction output files",
+            "Sarasi visual references and UI image boards capture the target operational workflows",
+            "Release artifacts package architecture documentation as PNG, JPG, and PDF exports",
         ], "#efe6cf"),
     ]
 
@@ -304,7 +303,7 @@ def render_use_case_diagram() -> Image.Image:
     draw = ImageDraw.Draw(image)
 
     draw.text((60, 42), "Prototype Use Case Diagram", font=TITLE_FONT, fill=TEXT)
-    draw.text((62, 92), "Primary actors and core interactions implemented or scaffolded in the prototype", font=SECTION_FONT, fill=SUBTEXT)
+    draw.text((62, 92), "Primary actors and core interactions derived from the prototype screens, APIs, and analytics services", font=SECTION_FONT, fill=SUBTEXT)
 
     system_box = (360, 180, 1540, 1160)
     draw.rounded_rectangle(system_box, radius=28, outline=FRAME, width=4, fill="#fcfbf7")
@@ -322,12 +321,12 @@ def render_use_case_diagram() -> Image.Image:
         "view_eta": ((1120, 300), (220, 90), "View Bus ETA", ACCENT_GREEN),
         "view_route": ((1380, 300), (230, 90), "View Active\nRoute", ACCENT_BLUE),
         "history": ((730, 470), (250, 90), "Review Trip\nHistory", ACCENT_GOLD),
-        "rate_bus": ((1030, 470), (240, 90), "Rate Driver /\nBus Service", ACCENT_GOLD),
-        "raise_alert": ((1330, 470), (250, 90), "Raise Emergency\nAlert", ACCENT_RED),
+        "rate_bus": ((1030, 470), (240, 90), "Submit Rating /\nComplaint", ACCENT_GOLD),
+        "raise_alert": ((1330, 470), (250, 90), "Raise Passenger\nEmergency Alert", ACCENT_RED),
         "login_driver": ((560, 665), (220, 90), "Driver Login", ACCENT_GREEN),
         "manage_trip": ((860, 650), (250, 90), "Start / End\nTrip", ACCENT_GREEN),
-        "crowd": ((1135, 650), (240, 90), "Update Crowd\nLevel", ACCENT_GREEN),
-        "driver_alert": ((1405, 650), (250, 90), "Respond to / Report\nEmergency", ACCENT_RED),
+        "crowd": ((1135, 650), (240, 90), "Update Crowd /\nTrip Status", ACCENT_GREEN),
+        "driver_alert": ((1405, 650), (250, 90), "Respond to / Report\nSOS Incident", ACCENT_RED),
         "login_admin": ((560, 960), (220, 90), "Admin Login", ACCENT_GOLD),
         "fleet": ((840, 930), (250, 90), "Monitor Live\nFleet", ACCENT_GOLD),
         "routes": ((1110, 930), (240, 90), "Manage Routes", ACCENT_GOLD),
@@ -375,15 +374,17 @@ def render_use_case_diagram() -> Image.Image:
     draw_association(draw, [(1585, 760), (1475, 650), (1530, 650)])
     draw_association(draw, [(1585, 760), (1435, 930), (1480, 930)])
 
-    note = "Dashed association shows analytical support by the ML layer for ETA and emergency prioritization."
+    note = "Dashed association shows ML support for ETA prediction and emergency prioritization; direct links show operational data access."
     draw.text((392, 1200), note, font=SMALL_FONT, fill=SUBTEXT)
     return image
 
 
 def save_outputs(image: Image.Image, stem: str) -> None:
     png_path = ROOT / f"{stem}.png"
+    jpg_path = ROOT / f"{stem}.jpg"
     pdf_path = ROOT / f"{stem}.pdf"
     image.save(png_path, "PNG")
+    image.save(jpg_path, "JPEG", quality=95)
     image.save(pdf_path, "PDF", resolution=150.0)
 
 
