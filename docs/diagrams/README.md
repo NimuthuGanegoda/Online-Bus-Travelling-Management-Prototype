@@ -16,6 +16,10 @@ To regenerate the assets locally:
 python3 docs/diagrams/generate_prototype_diagrams.py
 ```
 
+Requirements:
+- `graphviz` with the `dot` command available on `PATH`
+- Python `Pillow`
+
 The diagrams are derived from the current prototype layout under:
 - `prototypes/Integration`
 - `prototypes/Amiliya`

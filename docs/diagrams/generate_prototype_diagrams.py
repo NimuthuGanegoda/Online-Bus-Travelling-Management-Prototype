@@ -1,46 +1,166 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from subprocess import run
 
 from PIL import Image, ImageDraw, ImageFont
 
 
 ROOT = Path(__file__).resolve().parent
-CANVAS_BG = "#f5f2ea"
-FRAME = "#111111"
-TEXT = "#111111"
-SUBTEXT = "#404040"
-WHITE = "#ffffff"
-LINE = "#2f2f2f"
-ACCENT_BLUE = "#b9d7ea"
-ACCENT_GREEN = "#c8e6c9"
-ACCENT_GOLD = "#f2d49b"
-ACCENT_RED = "#f0beb5"
-ACCENT_PURPLE = "#d9d0f0"
+
+ARCH_DOT = r"""
+digraph PrototypeArchitecture {
+  graph [
+    rankdir=LR,
+    splines=ortho,
+    nodesep=0.55,
+    ranksep=0.9,
+    pad=0.35,
+    bgcolor="#fcfaf5",
+    fontname="Helvetica",
+    label="Prototype System Architecture Diagram\nOnline Bus Travelling Management Prototype derived from Integration, Sarasi, Amiliya, and Neo modules",
+    labelloc=t,
+    fontsize=24,
+    fontcolor="#1f2937"
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    color="#243447",
+    penwidth=1.4,
+    fontname="Helvetica",
+    fontsize=12,
+    margin="0.14,0.10"
+  ];
+
+  edge [
+    color="#5b6574",
+    penwidth=1.3,
+    arrowsize=0.8,
+    fontname="Helvetica",
+    fontsize=10
+  ];
+
+  subgraph cluster_experience {
+    label="Experience Layer";
+    color="#b8cbe0";
+    style="rounded,filled";
+    fillcolor="#eef5fb";
+    fontcolor="#1f2937";
+    fontsize=16;
+
+    passenger_ui [
+      fillcolor="#d9ebfb",
+      label="Passenger Apps\n- Integration Flutter client\n- Sarasi passenger prototype\n- Tracking, ETA, history, alerts, ratings"
+    ];
+    driver_ui [
+      fillcolor="#ddf1de",
+      label="Driver Apps\n- Integration Flutter client\n- Sarasi driver prototype\n- Trip control, crowd updates, SOS, NFC-oriented flows"
+    ];
+    admin_ui [
+      fillcolor="#f7e7bf",
+      label="Admin Dashboard\n- React admin console\n- Live fleet, routes, drivers, buses\n- Emergency handling and complaints"
+    ];
+  }
+
+  subgraph cluster_services {
+    label="Platform Services";
+    color="#c9bfd9";
+    style="rounded,filled";
+    fillcolor="#f4eefb";
+    fontcolor="#1f2937";
+    fontsize=16;
+
+    passenger_api [
+      fillcolor="#ede3fb",
+      label="Passenger API :3001\nExpress routes for login, register,\nbus location, route lookup, and ETA endpoint stub"
+    ];
+    driver_api [
+      fillcolor="#ede3fb",
+      label="Driver API :3000\nExpress routes for login,\nactive trip, trip start, and trip end"
+    ];
+    admin_api [
+      fillcolor="#ede3fb",
+      label="Admin API :3002\nExpress login plus CRUD for\nbuses, drivers, routes, and emergencies"
+    ];
+    supabase [
+      fillcolor="#f9d9d2",
+      label="Supabase Operational Data\nTrips, bus locations, routes, buses,\ndrivers, reviews, alerts, SOS requests"
+    ];
+  }
+
+  subgraph cluster_intelligence {
+    label="Analytics and Intelligence";
+    color="#b8d8c2";
+    style="rounded,filled";
+    fillcolor="#edf8ef";
+    fontcolor="#1f2937";
+    fontsize=16;
+
+    eta [
+      fillcolor="#dff2e6",
+      label="ETA Service\nNode.js orchestration + Python model\npredicts bus arrival time from trip features"
+    ];
+    rating [
+      fillcolor="#dff2e6",
+      label="Driver Rating Service\nSupabase comments + Python classifier\naggregates per-driver rating signals"
+    ];
+    triage [
+      fillcolor="#dff2e6",
+      label="Emergency Triage Service\nNode.js pipeline + Python ranking model\nprioritizes incident severity"
+    ];
+  }
+
+  subgraph cluster_assets {
+    label="Prototype Inputs and Assets";
+    color="#e1d2a9";
+    style="rounded,filled";
+    fillcolor="#fbf6e7";
+    fontcolor="#1f2937";
+    fontsize=16;
+
+    assets [
+      fillcolor="#fff7de",
+      label="Source Artifacts\n- Sarasi UI references and screen boards\n- Neo CSV datasets, encoders, trained models\n- Generated documentation diagrams for Releases"
+    ];
+  }
+
+  passenger_ui -> passenger_api;
+  driver_ui -> driver_api;
+  admin_ui -> admin_api;
+  admin_ui -> supabase [style=dashed];
+
+  passenger_api -> supabase;
+  driver_api -> supabase;
+  admin_api -> supabase;
+
+  passenger_api -> eta;
+  passenger_api -> rating;
+  admin_api -> triage;
+  driver_api -> triage [style=dashed];
+
+  assets -> eta;
+  assets -> rating;
+  assets -> triage;
+  assets -> passenger_ui [style=dashed];
+  assets -> driver_ui [style=dashed];
+  assets -> admin_ui [style=dashed];
+}
+"""
+
+BG = "#fcfaf5"
+FRAME = "#334155"
+TEXT = "#1f2937"
+SUBTEXT = "#475569"
+PASSENGER = "#d9ebfb"
+DRIVER = "#ddf1de"
+ADMIN = "#f7e7bf"
+ALERT = "#f9d9d2"
+SUPPORT = "#dff2e6"
 
 
-@dataclass
-class Box:
-    x: int
-    y: int
-    w: int
-    h: int
-    title: str
-    body: list[str]
-    fill: str
-
-    @property
-    def cx(self) -> int:
-        return self.x + self.w // 2
-
-    @property
-    def cy(self) -> int:
-        return self.y + self.h // 2
-
-
-def load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+def load_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
     candidates = []
     if bold:
         candidates.extend(
@@ -56,7 +176,6 @@ def load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFo
                 "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
             ]
         )
-
     for candidate in candidates:
         path = Path(candidate)
         if path.exists():
@@ -64,334 +183,180 @@ def load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFo
     return ImageFont.load_default()
 
 
-TITLE_FONT = load_font(34, bold=True)
+TITLE_FONT = load_font(40, bold=True)
+SUBTITLE_FONT = load_font(24)
 SECTION_FONT = load_font(24, bold=True)
-BOX_TITLE_FONT = load_font(20, bold=True)
-BODY_FONT = load_font(15)
-SMALL_FONT = load_font(13)
+BODY_FONT = load_font(20)
+SMALL_FONT = load_font(16)
 
 
-def draw_wrapped_text(
-    draw: ImageDraw.ImageDraw,
-    text: str,
-    xy: tuple[int, int],
-    font: ImageFont.ImageFont,
-    fill: str,
-    max_width: int,
-    line_spacing: int = 5,
-) -> int:
-    x, y = xy
-    words = text.split()
-    lines: list[str] = []
-    current = ""
-    for word in words:
-        candidate = word if not current else f"{current} {word}"
-        width = draw.textbbox((0, 0), candidate, font=font)[2]
-        if width <= max_width:
-            current = candidate
-        else:
-            if current:
-                lines.append(current)
-            current = word
-    if current:
-        lines.append(current)
-
-    line_height = draw.textbbox((0, 0), "Ag", font=font)[3]
-    for line in lines:
-        draw.text((x, y), line, font=font, fill=fill)
-        y += line_height + line_spacing
-    return y
-
-
-def draw_box(draw: ImageDraw.ImageDraw, box: Box) -> None:
-    draw.rounded_rectangle(
-        [(box.x, box.y), (box.x + box.w, box.y + box.h)],
-        radius=22,
-        outline=FRAME,
-        width=3,
-        fill=box.fill,
-    )
-    draw.text((box.x + 20, box.y + 16), box.title, font=BOX_TITLE_FONT, fill=TEXT)
-    current_y = box.y + 52
-    for line in box.body:
-        current_y = draw_wrapped_text(
-            draw,
-            f"• {line}",
-            (box.x + 22, current_y),
-            BODY_FONT,
-            TEXT,
-            box.w - 44,
-            line_spacing=4,
-        )
-        current_y += 6
-
-
-def draw_arrow(
-    draw: ImageDraw.ImageDraw,
-    start: tuple[int, int],
-    end: tuple[int, int],
-    label: str | None = None,
-    label_offset: tuple[int, int] = (0, 0),
-    width: int = 4,
-) -> None:
-    sx, sy = start
-    ex, ey = end
-    draw.line([start, end], fill=LINE, width=width)
-    arrow_size = 12
-    if abs(ex - sx) >= abs(ey - sy):
-        if ex >= sx:
-            points = [(ex, ey), (ex - arrow_size, ey - 6), (ex - arrow_size, ey + 6)]
-        else:
-            points = [(ex, ey), (ex + arrow_size, ey - 6), (ex + arrow_size, ey + 6)]
-    else:
-        if ey >= sy:
-            points = [(ex, ey), (ex - 6, ey - arrow_size), (ex + 6, ey - arrow_size)]
-        else:
-            points = [(ex, ey), (ex - 6, ey + arrow_size), (ex + 6, ey + arrow_size)]
-    draw.polygon(points, fill=LINE)
-    if label:
-        mid_x = (sx + ex) // 2 + label_offset[0]
-        mid_y = (sy + ey) // 2 + label_offset[1]
-        bbox = draw.textbbox((0, 0), label, font=SMALL_FONT)
-        pad_x = 8
-        pad_y = 4
-        draw.rounded_rectangle(
-            [
-                (mid_x - pad_x, mid_y - pad_y),
-                (mid_x + (bbox[2] - bbox[0]) + pad_x, mid_y + (bbox[3] - bbox[1]) + pad_y),
-            ],
-            radius=8,
-            fill=WHITE,
-            outline=FRAME,
-            width=1,
-        )
-        draw.text((mid_x, mid_y), label, font=SMALL_FONT, fill=SUBTEXT)
-
-
-def draw_dashed_line(
-    draw: ImageDraw.ImageDraw,
-    start: tuple[int, int],
-    end: tuple[int, int],
-    dash: int = 10,
-    gap: int = 8,
-    width: int = 3,
-) -> None:
-    sx, sy = start
-    ex, ey = end
-    length = ((ex - sx) ** 2 + (ey - sy) ** 2) ** 0.5
-    if length == 0:
-        return
-    dx = (ex - sx) / length
-    dy = (ey - sy) / length
-    distance = 0.0
-    while distance < length:
-        seg_start = (sx + dx * distance, sy + dy * distance)
-        seg_end_dist = min(distance + dash, length)
-        seg_end = (sx + dx * seg_end_dist, sy + dy * seg_end_dist)
-        draw.line([seg_start, seg_end], fill=LINE, width=width)
-        distance += dash + gap
-
-
-def draw_actor(draw: ImageDraw.ImageDraw, x: int, y: int, label: str) -> None:
-    head_r = 24
-    draw.ellipse([(x - head_r, y), (x + head_r, y + head_r * 2)], outline=FRAME, width=3, fill=WHITE)
-    body_top = y + head_r * 2
-    draw.line([(x, body_top), (x, body_top + 70)], fill=FRAME, width=4)
-    draw.line([(x - 40, body_top + 20), (x + 40, body_top + 20)], fill=FRAME, width=4)
-    draw.line([(x, body_top + 70), (x - 30, body_top + 120)], fill=FRAME, width=4)
-    draw.line([(x, body_top + 70), (x + 30, body_top + 120)], fill=FRAME, width=4)
-    bbox = draw.textbbox((0, 0), label, font=BOX_TITLE_FONT)
-    draw.text((x - (bbox[2] - bbox[0]) // 2, body_top + 132), label, font=BOX_TITLE_FONT, fill=TEXT)
-
-
-def draw_usecase(
-    draw: ImageDraw.ImageDraw,
-    center: tuple[int, int],
-    size: tuple[int, int],
-    label: str,
-    fill: str,
-) -> None:
-    cx, cy = center
-    w, h = size
-    draw.ellipse([(cx - w // 2, cy - h // 2), (cx + w // 2, cy + h // 2)], outline=FRAME, width=3, fill=fill)
-    lines = label.split("\n")
-    total_height = len(lines) * 18
-    current_y = cy - total_height // 2
-    for line in lines:
-        bbox = draw.textbbox((0, 0), line, font=BODY_FONT)
-        draw.text((cx - (bbox[2] - bbox[0]) // 2, current_y), line, font=BODY_FONT, fill=TEXT)
-        current_y += 20
-
-
-def draw_association(draw: ImageDraw.ImageDraw, points: Iterable[tuple[int, int]], dashed: bool = False) -> None:
-    pts = list(points)
-    if dashed:
-        for start, end in zip(pts, pts[1:]):
-            draw_dashed_line(draw, start, end)
-    else:
-        draw.line(pts, fill=LINE, width=3)
-
-
-def render_system_architecture() -> Image.Image:
-    image = Image.new("RGB", (1800, 1200), CANVAS_BG)
-    draw = ImageDraw.Draw(image)
-
-    draw.text((60, 42), "Prototype System Architecture Diagram", font=TITLE_FONT, fill=TEXT)
-    subtitle = "Online Bus Travelling Management Prototype: architecture derived from the Integration, Sarasi, Amiliya, and Neo prototype packages"
-    draw.text((62, 92), subtitle, font=SECTION_FONT, fill=SUBTEXT)
-
-    boxes = [
-        Box(70, 220, 360, 250, "Passenger Interfaces", [
-            "Flutter passenger client with login and home flow",
-            "Sarasi passenger prototype screens for tracking, ETA, alerts, ratings, and history",
-            "Passenger journeys request bus location, route, ETA, and complaint data",
-        ], ACCENT_BLUE),
-        Box(70, 510, 360, 220, "Driver Interfaces", [
-            "Flutter driver client with login and registration flow",
-            "Sarasi driver prototype screens for trip control, crowd level, NFC, ratings, and SOS",
-            "Driver journeys manage active trips and emergency reporting",
-        ], ACCENT_GREEN),
-        Box(70, 770, 360, 230, "Admin Interface", [
-            "React admin dashboard with nested routes and secure login",
-            "Live fleet, route management, driver management, bus management, emergencies, and complaints",
-            "Operational oversight is wired to Supabase-backed tables and Express APIs",
-        ], ACCENT_GOLD),
-        Box(530, 190, 360, 280, "Application Backends", [
-            "Passenger Express API on port 3001 exposes login, registration, bus-location, bus-route, and ETA placeholders",
-            "Driver Express API on port 3000 exposes login plus trip start, trip end, and active trip retrieval",
-            "Admin Express API on port 3002 exposes login and CRUD endpoints for buses, drivers, routes, and emergencies",
-        ], ACCENT_PURPLE),
-        Box(530, 550, 360, 230, "Operational Data Layer", [
-            "Supabase is the shared operational store for trips, bus_locations, routes, drivers, buses, reviews, alerts, and SOS requests",
-            "Integrated frontends query Supabase directly for live fleet, route maps, complaints, and dashboard tables",
-            "Prototype services still preserve lightweight local database scaffolding for earlier phases",
-        ], ACCENT_RED),
-        Box(1020, 180, 700, 280, "ML Intelligence Layer (Neo)", [
-            "ETA engine uses Node.js orchestration, Python inference, and joblib model artifacts trained on trip features",
-            "Driver rating engine pulls Supabase comments and classifies sentiment per driver through a Python model",
-            "Emergency triage engine ranks emergency incidents through a Node.js to Python scoring pipeline",
-        ], "#d7eadf"),
-        Box(1020, 560, 700, 230, "Prototype Assets and Training Data", [
-            "CSV datasets, trained model binaries, feature encoders, and generated prediction output files",
-            "Sarasi visual references and UI image boards capture the target operational workflows",
-            "Release artifacts package architecture documentation as PNG, JPG, and PDF exports",
-        ], "#efe6cf"),
-    ]
-
-    for box in boxes:
-        draw_box(draw, box)
-
-    draw_arrow((draw), (430, 345), (530, 345), "REST / JSON")
-    draw_arrow((draw), (430, 620), (530, 620), "REST / JSON")
-    draw_arrow((draw), (430, 885), (530, 885), "REST / JSON")
-    draw_arrow((draw), (890, 330), (1020, 330), "service calls")
-    draw_arrow((draw), (710, 470), (710, 550), "read / write", label_offset=(-40, 0))
-    draw_arrow((draw), (1370, 460), (1370, 560), "models + datasets", label_offset=(14, 0))
-    draw_arrow((draw), (890, 665), (1020, 665), "feature inputs", label_offset=(0, -26))
-    draw_arrow((draw), (1020, 735), (890, 735), "predictions / priorities", label_offset=(0, 12))
-
-    footer = (
-        "Derived from repo structure under prototypes/Integration, prototypes/Amiliya, "
-        "prototypes/Sarasi, and prototypes/Neo."
-    )
-    draw.text((62, 1128), footer, font=SMALL_FONT, fill=SUBTEXT)
-    return image
-
-
-def render_use_case_diagram() -> Image.Image:
-    image = Image.new("RGB", (1900, 1300), CANVAS_BG)
-    draw = ImageDraw.Draw(image)
-
-    draw.text((60, 42), "Prototype Use Case Diagram", font=TITLE_FONT, fill=TEXT)
-    draw.text((62, 92), "Primary actors and core interactions derived from the prototype screens, APIs, and analytics services", font=SECTION_FONT, fill=SUBTEXT)
-
-    system_box = (360, 180, 1540, 1160)
-    draw.rounded_rectangle(system_box, radius=28, outline=FRAME, width=4, fill="#fcfbf7")
-    draw.text((390, 205), "Online Bus Travelling Management Prototype", font=SECTION_FONT, fill=TEXT)
-
-    draw_actor(draw, 150, 290, "Passenger")
-    draw_actor(draw, 150, 615, "Driver")
-    draw_actor(draw, 150, 945, "Admin")
-    draw_actor(draw, 1760, 360, "ML Services")
-    draw_actor(draw, 1760, 760, "Data Store")
-
-    usecases = {
-        "login_passenger": ((560, 320), (220, 90), "Register / Login", ACCENT_BLUE),
-        "track_bus": ((840, 300), (230, 90), "Track Bus\nLocation", ACCENT_BLUE),
-        "view_eta": ((1120, 300), (220, 90), "View Bus ETA", ACCENT_GREEN),
-        "view_route": ((1380, 300), (230, 90), "View Active\nRoute", ACCENT_BLUE),
-        "history": ((730, 470), (250, 90), "Review Trip\nHistory", ACCENT_GOLD),
-        "rate_bus": ((1030, 470), (240, 90), "Submit Rating /\nComplaint", ACCENT_GOLD),
-        "raise_alert": ((1330, 470), (250, 90), "Raise Passenger\nEmergency Alert", ACCENT_RED),
-        "login_driver": ((560, 665), (220, 90), "Driver Login", ACCENT_GREEN),
-        "manage_trip": ((860, 650), (250, 90), "Start / End\nTrip", ACCENT_GREEN),
-        "crowd": ((1135, 650), (240, 90), "Update Crowd /\nTrip Status", ACCENT_GREEN),
-        "driver_alert": ((1405, 650), (250, 90), "Respond to / Report\nSOS Incident", ACCENT_RED),
-        "login_admin": ((560, 960), (220, 90), "Admin Login", ACCENT_GOLD),
-        "fleet": ((840, 930), (250, 90), "Monitor Live\nFleet", ACCENT_GOLD),
-        "routes": ((1110, 930), (240, 90), "Manage Routes", ACCENT_GOLD),
-        "drivers": ((1360, 930), (240, 90), "Manage Drivers /\nBuses", ACCENT_GOLD),
-        "emergency": ((980, 1085), (280, 95), "Review and Prioritize\nEmergency Incidents", ACCENT_RED),
-    }
-
-    for center, size, label, fill in usecases.values():
-        draw_usecase(draw, center, size, label, fill)
-
-    passenger_links = [
-        [(190, 450), (290, 450), (290, 320), (450, 320)],
-        [(190, 450), (315, 450), (315, 300), (725, 300)],
-        [(190, 450), (340, 450), (340, 280), (1010, 280)],
-        [(190, 450), (365, 450), (365, 260), (1265, 260)],
-        [(190, 450), (300, 450), (300, 470), (610, 470)],
-        [(190, 450), (325, 450), (325, 490), (910, 490)],
-        [(190, 450), (350, 450), (350, 510), (1205, 510)],
-    ]
-    for points in passenger_links:
-        draw_association(draw, points)
-
-    driver_links = [
-        [(190, 770), (300, 770), (300, 665), (450, 665)],
-        [(190, 770), (325, 770), (325, 650), (735, 650)],
-        [(190, 770), (350, 770), (350, 680), (1015, 680)],
-        [(190, 770), (375, 770), (375, 710), (1280, 710)],
-    ]
-    for points in driver_links:
-        draw_association(draw, points)
-
-    admin_links = [
-        [(190, 1100), (300, 1100), (300, 960), (450, 960)],
-        [(190, 1100), (325, 1100), (325, 930), (715, 930)],
-        [(190, 1100), (350, 1100), (350, 905), (990, 905)],
-        [(190, 1100), (375, 1100), (375, 880), (1240, 880)],
-        [(190, 1100), (400, 1100), (400, 1085), (820, 1085)],
-    ]
-    for points in admin_links:
-        draw_association(draw, points)
-
-    draw_association(draw, [(1585, 360), (1490, 470), (1440, 470)])
-    draw_association(draw, [(1585, 360), (1260, 1085), (1120, 1085)], dashed=True)
-    draw_association(draw, [(1585, 760), (1480, 300), (1495, 300)])
-    draw_association(draw, [(1585, 760), (1475, 650), (1530, 650)])
-    draw_association(draw, [(1585, 760), (1435, 930), (1480, 930)])
-
-    note = "Dashed association shows ML support for ETA prediction and emergency prioritization; direct links show operational data access."
-    draw.text((392, 1200), note, font=SMALL_FONT, fill=SUBTEXT)
-    return image
-
-
-def save_outputs(image: Image.Image, stem: str) -> None:
+def render_dot(dot_source: str, stem: str) -> Path:
+    dot_path = ROOT / f"{stem}.dot"
+    svg_path = ROOT / f"{stem}.svg"
     png_path = ROOT / f"{stem}.png"
-    jpg_path = ROOT / f"{stem}.jpg"
     pdf_path = ROOT / f"{stem}.pdf"
-    image.save(png_path, "PNG")
+    jpg_path = ROOT / f"{stem}.jpg"
+
+    dot_path.write_text(dot_source.strip() + "\n", encoding="utf-8")
+
+    run(["dot", "-Tpng", str(dot_path), "-o", str(png_path)], check=True)
+    run(["dot", "-Tpdf", str(dot_path), "-o", str(pdf_path)], check=True)
+
+    image = Image.open(png_path).convert("RGB")
     image.save(jpg_path, "JPEG", quality=95)
-    image.save(pdf_path, "PDF", resolution=150.0)
+
+    svg_path.unlink(missing_ok=True)
+    return dot_path
+
+
+def draw_centered(draw: ImageDraw.ImageDraw, text: str, center: tuple[int, int], font: ImageFont.ImageFont, fill: str) -> None:
+    bbox = draw.textbbox((0, 0), text, font=font)
+    x = center[0] - (bbox[2] - bbox[0]) // 2
+    y = center[1] - (bbox[3] - bbox[1]) // 2
+    draw.text((x, y), text, font=font, fill=fill)
+
+
+def draw_pill(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], text: str, fill: str) -> None:
+    draw.rounded_rectangle(box, radius=28, fill=fill, outline=FRAME, width=3)
+    draw_centered(draw, text, ((box[0] + box[2]) // 2, (box[1] + box[3]) // 2), BODY_FONT, TEXT)
+
+
+def draw_box(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], text: str, fill: str, radius: int = 20) -> None:
+    draw.rounded_rectangle(box, radius=radius, fill=fill, outline=FRAME, width=3)
+    draw_centered(draw, text, ((box[0] + box[2]) // 2, (box[1] + box[3]) // 2), BODY_FONT, TEXT)
+
+
+def draw_actor_link(draw: ImageDraw.ImageDraw, actor_box: tuple[int, int, int, int], lane_x: int, targets: list[tuple[int, int]]) -> None:
+    start_x = actor_box[2]
+    start_y = (actor_box[1] + actor_box[3]) // 2
+    draw.line((start_x, start_y, lane_x, start_y), fill="#94a3b8", width=3)
+    if targets:
+        top = min(y for _, y in targets)
+        bottom = max(y for _, y in targets)
+        draw.line((lane_x, top, lane_x, bottom), fill="#94a3b8", width=3)
+    for target_x, target_y in targets:
+        draw.line((lane_x, target_y, target_x, target_y), fill="#94a3b8", width=3)
+
+
+def draw_dashed(draw: ImageDraw.ImageDraw, start: tuple[int, int], end: tuple[int, int]) -> None:
+    sx, sy = start
+    ex, ey = end
+    if sx == ex:
+        step = 14 if ey >= sy else -14
+        for y in range(sy, ey, step * 2):
+            y2 = min(y + step, ey) if step > 0 else max(y + step, ey)
+            draw.line((sx, y, ex, y2), fill="#94a3b8", width=3)
+    else:
+        step = 14 if ex >= sx else -14
+        for x in range(sx, ex, step * 2):
+            x2 = min(x + step, ex) if step > 0 else max(x + step, ex)
+            draw.line((x, sy, x2, ey), fill="#94a3b8", width=3)
+
+
+def render_use_case_diagram() -> None:
+    image = Image.new("RGB", (2200, 1400), BG)
+    draw = ImageDraw.Draw(image)
+
+    draw_centered(draw, "Prototype Use Case Diagram", (1100, 60), TITLE_FONT, TEXT)
+    draw_centered(
+        draw,
+        "Primary actors and core interactions derived from prototype screens, APIs, and analytics services",
+        (1100, 115),
+        SUBTITLE_FONT,
+        SUBTEXT,
+    )
+
+    boundary = (260, 180, 1940, 1280)
+    draw.rounded_rectangle(boundary, radius=32, outline="#d6cfc2", width=3, fill="#fffdf8")
+    draw.text((300, 205), "Online Bus Travelling Management Prototype", font=SECTION_FONT, fill=TEXT)
+
+    lanes = [
+        ((310, 280, 1890, 540), "Passenger Flows", "#eef5fb"),
+        ((310, 580, 1890, 810), "Driver Flows", "#edf8ef"),
+        ((310, 850, 1890, 1210), "Admin Flows", "#fbf6e7"),
+    ]
+    for box, label, fill in lanes:
+        draw.rounded_rectangle(box, radius=28, outline="#d8dee8", width=2, fill=fill)
+        draw.text((box[0] + 24, box[1] + 18), label, font=SECTION_FONT, fill=TEXT)
+
+    passenger_box = (60, 360, 200, 430)
+    driver_box = (60, 655, 200, 725)
+    admin_box = (60, 1010, 200, 1080)
+    ml_box = (1975, 355, 2140, 430)
+    store_box = (1950, 930, 2165, 1005)
+
+    draw_box(draw, passenger_box, "Passenger", PASSENGER)
+    draw_box(draw, driver_box, "Driver", DRIVER)
+    draw_box(draw, admin_box, "Admin", ADMIN)
+    draw_box(draw, ml_box, "ML Services", SUPPORT)
+    draw_box(draw, store_box, "Operational Data Store", ALERT)
+
+    passenger_nodes = [
+        ((430, 350, 700, 420), "Register / Login", PASSENGER),
+        ((770, 350, 1080, 420), "Track Bus Location", PASSENGER),
+        ((1150, 350, 1380, 420), "View Bus ETA", SUPPORT),
+        ((1450, 350, 1730, 420), "View Active Route", PASSENGER),
+        ((520, 455, 820, 525), "Review Trip History", ADMIN),
+        ((930, 455, 1270, 525), "Submit Rating / Complaint", ADMIN),
+        ((1380, 455, 1765, 525), "Raise Emergency Alert", ALERT),
+    ]
+
+    driver_nodes = [
+        ((520, 645, 790, 715), "Driver Login", DRIVER),
+        ((870, 645, 1130, 715), "Start / End Trip", DRIVER),
+        ((1210, 645, 1585, 715), "Update Crowd / Trip Status", DRIVER),
+        ((1660, 645, 1845, 715), "Report SOS", ALERT),
+    ]
+
+    admin_nodes = [
+        ((430, 950, 660, 1020), "Admin Login", ADMIN),
+        ((740, 950, 1030, 1020), "Monitor Live Fleet", ADMIN),
+        ((1110, 950, 1360, 1020), "Manage Routes", ADMIN),
+        ((1440, 950, 1775, 1020), "Manage Drivers / Buses", ADMIN),
+        ((600, 1080, 970, 1150), "Review Complaints", ADMIN),
+        ((1080, 1080, 1490, 1150), "Prioritize Emergencies", ALERT),
+    ]
+
+    for box, label, fill in passenger_nodes + driver_nodes + admin_nodes:
+        draw_pill(draw, box, label, fill)
+
+    draw_actor_link(draw, passenger_box, 245, [(box[0], (box[1] + box[3]) // 2) for box, _, _ in passenger_nodes])
+    draw_actor_link(draw, driver_box, 245, [(box[0], (box[1] + box[3]) // 2) for box, _, _ in driver_nodes])
+    draw_actor_link(draw, admin_box, 245, [(box[0], (box[1] + box[3]) // 2) for box, _, _ in admin_nodes])
+
+    ml_anchor = (ml_box[0], (ml_box[1] + ml_box[3]) // 2)
+    for target_box in [passenger_nodes[2][0], passenger_nodes[5][0], admin_nodes[5][0]]:
+        target = (target_box[2], (target_box[1] + target_box[3]) // 2)
+        draw_dashed(draw, (target[0] + 20, target[1]), (ml_anchor[0], target[1]))
+        draw_dashed(draw, (ml_anchor[0], target[1]), ml_anchor)
+
+    store_anchor = (store_box[0], (store_box[1] + store_box[3]) // 2)
+    for target_box in [passenger_nodes[1][0], passenger_nodes[3][0], driver_nodes[1][0], admin_nodes[1][0], admin_nodes[3][0], admin_nodes[4][0]]:
+        target = (target_box[2], (target_box[1] + target_box[3]) // 2)
+        draw_dashed(draw, (target[0] + 20, target[1]), (store_anchor[0], target[1]))
+        draw_dashed(draw, (store_anchor[0], target[1]), store_anchor)
+
+    note = "Dashed links show analytics or shared operational data supporting the primary use cases."
+    draw.text((320, 1235), note, font=SMALL_FONT, fill=SUBTEXT)
+
+    png_path = ROOT / "prototype-use-case-diagram.png"
+    pdf_path = ROOT / "prototype-use-case-diagram.pdf"
+    jpg_path = ROOT / "prototype-use-case-diagram.jpg"
+    svg_path = ROOT / "prototype-use-case-diagram.svg"
+
+    image.save(png_path, "PNG")
+    image.save(pdf_path, "PDF", resolution=160.0)
+    image.save(jpg_path, "JPEG", quality=95)
+    if svg_path.exists():
+        svg_path.unlink()
 
 
 def main() -> None:
-    save_outputs(render_system_architecture(), "prototype-system-architecture-diagram")
-    save_outputs(render_use_case_diagram(), "prototype-use-case-diagram")
-    print("Generated diagram assets in", ROOT)
+    temp_files = [render_dot(ARCH_DOT, "prototype-system-architecture-diagram")]
+    for temp_file in temp_files:
+        temp_file.unlink(missing_ok=True)
+    render_use_case_diagram()
+    print("Generated Graphviz diagram assets in", ROOT)
 
 
 if __name__ == "__main__":
