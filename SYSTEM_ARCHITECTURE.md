@@ -69,5 +69,5 @@ graph TD
 - **Emergency Triage:** Automatically prioritizes emergency reports based on severity, victims, and location factors.
 
 ### 4. Data Layer
-- **SQLite:** Used for lightweight, reliable data storage of user profiles, trips, and settings.
+- **Supabase:** Used for reliable, scalable data storage of user profiles, trips, settings, and ratings using PostgreSQL.
 - **Datasets:** CSV and Joblib files store the historical data and trained machine learning models used by the Intelligence Layer.

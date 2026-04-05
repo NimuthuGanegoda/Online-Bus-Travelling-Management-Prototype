@@ -37,16 +37,16 @@ Please be sure to keep that in mind before using the models as there are other f
 
 USER MANUAL 
 1. Bus driver / Bus ratings
-   Install dpendancies for jolib, numpy, sys and sqlite3 
-   Run the set_db to create DB file [ node setup_db.js]
+   Install dependencies (npm install)
+   Ensure Supabase credentials are set in index.js
    Run [ node index.js ] 
 
 2. Arrival time estimation
-   Install dependacies such as sqlite3
-   run [node eta_service.js]
+   Install dependencies (npm install)
+   Run [node eta_service.js]
 
 3. Imergency list prioritization
-     Installing dependancies [-m pip install xgboost joblib scikit-learn pandas]
+     Installing dependencies [-m pip install xgboost joblib scikit-learn pandas]
      Running JS file [node triage_service.js]
      
     

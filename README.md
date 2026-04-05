@@ -34,7 +34,7 @@ The backend and ML models are developed using Python and Node.js.
 
 *   **Frontend:** `Flutter`, `Dart`
 *   **Backend & ML:** `Python`, `Node.js`, `Scikit-learn`, `Pandas`
-*   **Database:** `SQLite`
+*   **Database:** `Supabase (PostgreSQL)`
 
 ## System Architecture
 

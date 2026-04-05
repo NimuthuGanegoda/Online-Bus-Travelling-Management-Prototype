@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const supabase = require('../database'); // Assuming you have a Supabase client instance
+const { spawn } = require('child_process');
+const path = require('path');
 
 // Passenger login
 router.post('/login', (req, res) => {
@@ -46,9 +48,67 @@ router.get('/bus-location', async (req, res) => {
   }
 });
 
-// Get bus arrival time (placeholder)
-router.get('/bus-arrival', (req, res) => {
-  res.send('Get bus arrival time endpoint (not implemented)');
+// Helper function to predict ETA using the Python ML model
+function predictETA(tripData) {
+  return new Promise((resolve, reject) => {
+    const pyScript = path.resolve(__dirname, '../../../../Neo/Protype models/Arrival time estimation/predict_arrival.py');
+    const py = spawn('python3', [pyScript]);
+
+    let stdout = '';
+    let stderr = '';
+
+    py.stdout.on('data', (chunk) => stdout += chunk.toString());
+    py.stderr.on('data', (chunk) => stderr += chunk.toString());
+
+    py.on('close', (code) => {
+      if (code !== 0) return reject(new Error(`Python Error: ${stderr || stdout}`));
+      try {
+        const result = JSON.parse(stdout.trim());
+        if (result.error) return reject(new Error(result.error));
+        resolve(result.eta_minutes);
+      } catch (err) {
+        reject(new Error(`Invalid output: ${stdout}`));
+      }
+    });
+
+    py.stdin.write(JSON.stringify(tripData));
+    py.stdin.end();
+  });
+}
+
+// Get bus arrival time (ETA) - Integrated with XGBoost ML model
+router.get('/bus-arrival', async (req, res) => {
+  const { busId, distance, traffic, weather, passengers, full } = req.query;
+
+  if (!busId) {
+    return res.status(400).send('Bus ID is required');
+  }
+
+  // Construct features required by the ML model. We use query params if provided,
+  // otherwise default to a baseline scenario for the prototype.
+  const inputData = {
+    distance_to_stop_km: parseFloat(distance) || 3.2,
+    traffic_density: parseFloat(traffic) || 0.65,
+    weather_score: parseFloat(weather) || 0.80,
+    passenger_count: parseInt(passengers) || 22,
+    is_bus_full: parseInt(full) || 0,
+    driver_rating: 4.5, // Dummy average rating for now
+    "route_id_SL-001": 1,
+    "route_id_SL-002": 0,
+    "route_id_SL-003": 0,
+    "route_id_SL-004": 0,
+    "route_id_SL-005": 0,
+    "route_id_SL-006": 0,
+    "route_id_SL-007": 0
+  };
+
+  try {
+    const eta = await predictETA(inputData);
+    res.json({ busId, eta_minutes: eta, parameters: inputData });
+  } catch (error) {
+    console.error('Error predicting ETA:', error);
+    res.status(500).json({ error: 'Error calculating ETA', details: error.message });
+  }
 });
 
 // Get bus route - now fetches from Supabase
