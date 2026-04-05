@@ -1,5 +1,5 @@
-
 const express = require('express');
+const db = require('./database'); // Initialize SQLite database
 const driverRoutes = require('./routes/driver');
 
 const app = express();
